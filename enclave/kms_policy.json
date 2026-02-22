@@ -1,0 +1,50 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowEnclaveAccess",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::ACCOUNT_ID:role/ESGAuditEnclaveRole"
+      },
+      "Action": [
+        "kms:Decrypt",
+        "kms:GenerateDataKey"
+      ],
+      "Resource": "*",
+      "Condition": {
+        "StringEqualsIgnoreCase": {
+          "kms:RecipientAttestation:PCR0": "ENCLAVE_IMAGE_HASH",
+          "kms:RecipientAttestation:PCR1": "KERNEL_CONFIG_HASH",
+          "kms:RecipientAttestation:PCR2": "APPLICATION_CODE_HASH"
+        }
+      }
+    },
+    {
+      "Sid": "AllowKeyAdministration",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::ACCOUNT_ID:role/AdminRole"
+      },
+      "Action": [
+        "kms:CreateKey",
+        "kms:ScheduleKeyDeletion",
+        "kms:EnableKeyRotation",
+        "kms:PutKeyPolicy",
+        "kms:GetKeyPolicy"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "AllowParentInstanceEncryption",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::ACCOUNT_ID:role/ESGAuditParentRole"
+      },
+      "Action": [
+        "kms:Encrypt"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

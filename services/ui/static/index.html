@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trust & Verification Terminal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="overlay-scanline"></div>
+    <div class="container">
+        <header class="cyber-header">
+            <div class="logo-box">
+                <svg viewBox="0 0 100 100" class="logo-svg">
+                    <circle cx="50" cy="50" r="45" stroke="white" stroke-width="2" fill="none" class="pulse-circle"/>
+                    <rect x="20" y="20" width="60" height="60" stroke="white" stroke-width="2" fill="none" class="spin-rect"/>
+                </svg>
+            </div>
+            <h1>TRUST_TERMINAL <span class="blink">_V2.0</span></h1>
+            <div class="status-indicator">SYSTEM: ONLINE</div>
+        </header>
+
+        <main class="main-interface">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('provenance')">MODULE_01: C2PA_VALIDATOR</button>
+                <button class="tab-btn" onclick="switchTab('privacy')">MODULE_02: PII_OBFUSCATION</button>
+            </div>
+
+            <!-- C2PA MODULE -->
+            <section id="provenance" class="module-section active">
+                <div class="glass-panel input-panel">
+                    <h2>// FILE_UPLOAD_PROTOCOL</h2>
+                    <div class="drop-zone" id="drop-zone">
+                        <div class="icon-upload"></div>
+                        <p>DRAG DETECTED FILE HERE OR <span class="highlight">CLICK TO SCAN</span></p>
+                        <input type="file" id="file-input" hidden>
+                    </div>
+                </div>
+
+                <div class="glass-panel output-panel">
+                    <h2>// DIAGNOSTIC_REPORT</h2>
+                    <div id="c2pa-result" class="result-display">
+                        <div class="placeholder-text">AWAITING INPUT STREAM...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PRIVACY MODULE -->
+            <section id="privacy" class="module-section">
+                <div class="glass-panel input-panel">
+                    <h2>// TEXT_INPUT_STREAM</h2>
+                    <textarea id="pii-input" placeholder="ENTER CLASSIFIED DATA FOR REDACTION..."></textarea>
+                    <button class="neon-btn" onclick="processPII()">INITIATE_MASKING_SEQUENCE</button>
+                </div>
+
+                <div class="glass-panel output-panel">
+                    <h2>// SANITIZED_OUTPUT</h2>
+                    <div id="pii-result" class="result-display code-block"></div>
+                </div>
+            </section>
+        </main>
+        
+        <footer class="cyber-footer">
+             <div class="footer-data">SECURE CONNECTION: ENCRYPTED</div>
+             <div class="footer-data">REDIS_LINK: ACTIVE</div>
+        </footer>
+    </div>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

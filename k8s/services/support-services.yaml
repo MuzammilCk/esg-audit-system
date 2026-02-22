@@ -1,0 +1,220 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vector-store
+  namespace: esg-audit
+  labels:
+    app: vector-store
+    component: embeddings
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: vector-store
+  template:
+    metadata:
+      labels:
+        app: vector-store
+        component: embeddings
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: vector-store
+          image: esg-audit/vectorstore:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8004
+              name: http
+          envFrom:
+            - configMapRef:
+                name: esg-audit-config
+            - secretRef:
+                name: esg-audit-secrets
+          env:
+            - name: PORT
+              value: "8004"
+            - name: QDRANT_HOST
+              value: "qdrant"
+            - name: QDRANT_PORT
+              value: "6333"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8004
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8004
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vector-store
+  namespace: esg-audit
+spec:
+  selector:
+    app: vector-store
+  ports:
+    - port: 8004
+      targetPort: 8004
+      name: http
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: privacy-service
+  namespace: esg-audit
+  labels:
+    app: privacy-service
+    component: pii-masker
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: privacy-service
+  template:
+    metadata:
+      labels:
+        app: privacy-service
+        component: pii-masker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: privacy-service
+          image: esg-audit/privacy:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8002
+              name: http
+          env:
+            - name: PORT
+              value: "8002"
+            - name: REDIS_HOST
+              value: "redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: esg-audit-secrets
+                  key: ENCRYPTION_KEY
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8002
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8002
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: privacy-service
+  namespace: esg-audit
+spec:
+  selector:
+    app: privacy-service
+  ports:
+    - port: 8002
+      targetPort: 8002
+      name: http
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-service
+  namespace: esg-audit
+  labels:
+    app: security-service
+    component: cybersecurity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: security-service
+  template:
+    metadata:
+      labels:
+        app: security-service
+        component: cybersecurity
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: security-service
+          image: esg-audit/security:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8006
+              name: http
+          envFrom:
+            - configMapRef:
+                name: esg-audit-config
+            - secretRef:
+                name: esg-audit-secrets
+          env:
+            - name: PORT
+              value: "8006"
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8006
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8006
+            initialDelaySeconds: 5
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: security-service
+  namespace: esg-audit
+spec:
+  selector:
+    app: security-service
+  ports:
+    - port: 8006
+      targetPort: 8006
+      name: http
+  type: ClusterIP

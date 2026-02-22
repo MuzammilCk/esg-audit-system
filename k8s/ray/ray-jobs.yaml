@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-audit-job
+  namespace: esg-audit
+  labels:
+    app: ray-audit-job
+    component: distributed-audit
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ray-audit-job
+  template:
+    metadata:
+      labels:
+        app: ray-audit-job
+    spec:
+      serviceAccountName: ray-sa
+      containers:
+        - name: ray-audit-submit
+          image: esg-audit/ray-jobs:latest
+          imagePullPolicy: Always
+          env:
+            - name: RAY_ADDRESS
+              value: "ray://ray-head:10001"
+            - name: RAY_DASHBOARD
+              value: "http://ray-head:8265"
+            - name: REDIS_HOST
+              value: "redis"
+            - name: QDRANT_HOST
+              value: "qdrant"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          command: ["python", "-m", "ray_jobs.submit"]
+          volumeMounts:
+            - name: job-config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: job-config
+          configMap:
+            name: ray-job-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ray-job-config
+  namespace: esg-audit
+data:
+  job_config.yaml: |
+    job_name: esg-distributed-audit
+    runtime_env:
+      pip:
+        - langgraph
+        - openai
+        - qdrant-client
+      env_vars:
+        LOG_LEVEL: INFO
+    entrypoint: python -m ray_jobs.audit_worker
+    metadata:
+      description: Distributed ESG compliance audit

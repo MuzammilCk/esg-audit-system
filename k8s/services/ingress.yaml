@@ -1,0 +1,97 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: esg-audit-ingress
+  namespace: esg-audit
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+    nginx.ingress.kubernetes.io/rate-limit-window: "1m"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+      add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  tls:
+    - hosts:
+        - esg-audit.example.com
+      secretName: esg-audit-tls
+  rules:
+    - host: esg-audit.example.com
+      http:
+        paths:
+          - path: /api/audit
+            pathType: Prefix
+            backend:
+              service:
+                name: audit-agents
+                port:
+                  number: 8003
+          - path: /api/vector
+            pathType: Prefix
+            backend:
+              service:
+                name: vector-store
+                port:
+                  number: 8004
+          - path: /api/privacy
+            pathType: Prefix
+            backend:
+              service:
+                name: privacy-service
+                port:
+                  number: 8002
+          - path: /api/security
+            pathType: Prefix
+            backend:
+              service:
+                name: security-service
+                port:
+                  number: 8006
+          - path: /ray
+            pathType: Prefix
+            backend:
+              service:
+                name: ray-head
+                port:
+                  number: 8265
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ui-service
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: esg-audit-internal
+  namespace: esg-audit
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /internal/redis
+            pathType: Prefix
+            backend:
+              service:
+                name: redis
+                port:
+                  number: 6379
+          - path: /internal/qdrant
+            pathType: Prefix
+            backend:
+              service:
+                name: qdrant
+                port:
+                  number: 6333

@@ -1,0 +1,163 @@
+version: "3.9"
+
+services:
+  document-fetcher:
+    build:
+      context: .
+      dockerfile: services/ingestion/Dockerfile
+    command: ["uvicorn", "services.ingestion.fetcher:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    environment:
+      PORT: "8000"
+      # Restrict local ingestion to the mounted /data folder when running in Docker.
+      FETCHER_ALLOWED_LOCAL_ROOT: "/data"
+      FETCHER_HTTP_TIMEOUT_SECONDS: "30"
+      FETCHER_RETRY_MAX_ATTEMPTS: "5"
+      FETCHER_RETRY_WAIT_MULTIPLIER: "0.5"
+      FETCHER_RETRY_WAIT_MIN_SECONDS: "0.5"
+      FETCHER_RETRY_WAIT_MAX_SECONDS: "8"
+      # Optional: required only for source_type=gdrive.
+      GDRIVE_ACCESS_TOKEN: ""
+    volumes:
+      - ./data:/data:ro
+
+  format-normalizer:
+    profiles: ["normalizer"]
+    build:
+      context: .
+      dockerfile: services/ingestion/Dockerfile
+    command: ["uvicorn", "services.ingestion.normalizer:app", "--host", "0.0.0.0", "--port", "8001"]
+    ports:
+      - "8001:8001"
+    environment:
+      PORT: "8001"
+      NORMALIZER_POSTGRES_DSN: "postgresql://postgres:postgres@postgres:5432/esg_audit"
+      NORMALIZER_POSTGRES_TABLE: "normalized_documents"
+    depends_on:
+      - postgres
+
+  postgres:
+    profiles: ["normalizer"]
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: esg_audit
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  privacy-service:
+    build:
+      context: .
+      dockerfile: services/privacy/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ENCRYPTION_KEY: ${PRIVACY_ENCRYPTION_KEY:-generate_one_if_missing}
+    depends_on:
+      - redis
+
+  ui-service:
+    build:
+      context: .
+      dockerfile: services/ui/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ENCRYPTION_KEY: ${PRIVACY_ENCRYPTION_KEY:-generate_one_if_missing}
+    volumes:
+       # Mount source code for live reloading if desired
+       - ./services/ui:/app/services/ui
+    depends_on:
+      - redis
+      - privacy-service
+
+  audit-agents:
+    build:
+      context: .
+      dockerfile: services/agents/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      PORT: "8003"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      ENCRYPTION_KEY: ${PRIVACY_ENCRYPTION_KEY:-generate_one_if_missing}
+      USE_SQLITE_CHECKPOINT: "false"
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4-turbo-preview}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai}
+      USE_LLM_ANALYSIS: ${USE_LLM_ANALYSIS:-true}
+    depends_on:
+      - redis
+      - privacy-service
+      - qdrant
+    volumes:
+      - ./services/agents:/app/services/agents
+      - ./services/llm:/app/services/llm
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+
+  vector-store:
+    build:
+      context: .
+      dockerfile: services/vectorstore/Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      PORT: "8004"
+      QDRANT_HOST: qdrant
+      QDRANT_PORT: 6333
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+    depends_on:
+      - qdrant
+    volumes:
+      - ./services/vectorstore:/app/services/vectorstore
+
+  security-service:
+    build:
+      context: .
+      dockerfile: services/security/Dockerfile
+    ports:
+      - "8006:8006"
+    environment:
+      PORT: "8006"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AUTO_MITIGATE: "true"
+      ALERT_THRESHOLD: "0.6"
+    volumes:
+      - ./services/security:/app/services/security
+    depends_on:
+      - audit-agents
+
+volumes:
+  postgres_data:
+  redis_data:
+  qdrant_data:

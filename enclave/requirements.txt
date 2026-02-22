@@ -1,0 +1,17 @@
+# AWS Nitro Enclave Dependencies
+
+# Core
+pydantic>=2.5.0
+
+# AWS SDK
+boto3>=1.29.0
+
+# Cryptography
+cryptography>=41.0.0
+cbor2>=5.4.0
+
+# Async
+asyncio-compat>=0.1.0
+
+# Note: LangGraph and services dependencies should be copied
+# from the main services directory during build

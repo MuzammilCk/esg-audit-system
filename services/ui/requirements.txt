@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+jinja2
+c2pa-python==0.28.0
+presidio-analyzer
+presidio-anonymizer
+spacy==3.7.5
+redis
+cryptography

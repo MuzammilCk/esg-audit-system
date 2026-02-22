@@ -1,0 +1,188 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ray-sa
+  namespace: esg-audit
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ray-cluster-role
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "pods/status", "pods/exec", "services", "services/status", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch", "create", "delete", "patch", "update"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ray-cluster-binding
+subjects:
+  - kind: ServiceAccount
+    name: ray-sa
+    namespace: esg-audit
+roleRef:
+  kind: ClusterRole
+  name: ray-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-head
+  namespace: esg-audit
+  labels:
+    app: ray
+    component: head
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ray
+      component: head
+  template:
+    metadata:
+      labels:
+        app: ray
+        component: head
+    spec:
+      serviceAccountName: ray-sa
+      containers:
+        - name: ray-head
+          image: rayproject/ray:2.9.0-py311
+          ports:
+            - containerPort: 6379
+              name: gcs
+            - containerPort: 8265
+              name: dashboard
+            - containerPort: 10001
+              name: client
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              ray start --head \
+                --port=6379 \
+                --dashboard-host=0.0.0.0 \
+                --dashboard-port=8265 \
+                --num-cpus=0 \
+                --block
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: 2000m
+              memory: 8Gi
+          livenessProbe:
+            exec:
+              command: ["ray", "status"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            exec:
+              command: ["ray", "status"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          volumeMounts:
+            - name: ray-logs
+              mountPath: /tmp/ray
+      volumes:
+        - name: ray-logs
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ray-head
+  namespace: esg-audit
+spec:
+  selector:
+    app: ray
+    component: head
+  ports:
+    - port: 6379
+      targetPort: 6379
+      name: gcs
+    - port: 8265
+      targetPort: 8265
+      name: dashboard
+    - port: 10001
+      targetPort: 10001
+      name: client
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ray-worker
+  namespace: esg-audit
+  labels:
+    app: ray
+    component: worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ray
+      component: worker
+  template:
+    metadata:
+      labels:
+        app: ray
+        component: worker
+    spec:
+      serviceAccountName: ray-sa
+      initContainers:
+        - name: wait-for-head
+          image: busybox:1.35
+          command: ['sh', '-c', 'until nc -z ray-head 6379; do sleep 1; done']
+      containers:
+        - name: ray-worker
+          image: rayproject/ray:2.9.0-py311
+          command: ["/bin/bash", "-lc"]
+          args:
+            - |
+              ray start \
+                --address=ray-head:6379 \
+                --num-cpus=2 \
+                --memory=4096000000 \
+                --block
+          resources:
+            requests:
+              cpu: 1500m
+              memory: 4Gi
+            limits:
+              cpu: 2000m
+              memory: 6Gi
+          env:
+            - name: RAY_HEAD_ADDRESS
+              value: "ray-head:6379"
+          volumeMounts:
+            - name: ray-logs
+              mountPath: /tmp/ray
+      volumes:
+        - name: ray-logs
+          emptyDir: {}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ray-worker-hpa
+  namespace: esg-audit
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ray-worker
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60

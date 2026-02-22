@@ -1,0 +1,21 @@
+# LangGraph Multiagent System
+langgraph>=0.2.0
+langchain-core>=0.3.0
+
+# API Framework
+fastapi>=0.109.0
+uvicorn>=0.27.0
+pydantic>=2.5.0
+
+# Async Support
+aiohttp>=3.9.0
+
+# OpenAI LLM Integration
+openai>=1.10.0
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+
+# SQLite for checkpointing (optional, built-in)
+# aiosqlite>=0.19.0

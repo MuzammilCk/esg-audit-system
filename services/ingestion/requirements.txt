@@ -1,0 +1,43 @@
+# NOTE: The original pinned versions in the spec predate Python 3.13 and are not available
+# as wheels for Python 3.13. We use environment markers to keep the original pins for
+# Python < 3.13 while selecting compatible versions for Python >= 3.13.
+
+fastapi==0.104.1; python_version < "3.13"
+fastapi==0.129.0; python_version >= "3.13"
+
+aiohttp==3.9.0; python_version < "3.13"
+aiohttp==3.13.3; python_version >= "3.13"
+
+boto3==1.29.0
+python-magic==0.4.27
+tenacity==8.2.3
+
+pydantic==2.5.0; python_version < "3.13"
+pydantic==2.12.5; python_version >= "3.13"
+
+uvicorn==0.24.0.post1; python_version < "3.13"
+uvicorn==0.40.0; python_version >= "3.13"
+
+# Normalizer
+unstructured[all-docs]==0.11.0; python_version < "3.13"
+# On Python 3.13, the "all-docs" extra pulls in constraints that currently conflict
+# with pdfplumber/pdfminer pins. The service code treats unstructured as best-effort
+# and falls back to the specialized parsers when unavailable.
+unstructured==0.20.2; python_version >= "3.13"
+
+tabulate==0.9.0
+
+Pillow==10.1.0; python_version < "3.13"
+Pillow==10.4.0; python_version >= "3.13"
+
+pdfplumber==0.11.9
+
+PyMuPDF==1.24.1; python_version < "3.13"
+PyMuPDF==1.27.1; python_version >= "3.13"
+
+python-docx==1.1.0
+openpyxl==3.1.2; python_version < "3.13"
+openpyxl==3.1.5; python_version >= "3.13"
+
+asyncpg==0.29.0; python_version < "3.13"
+asyncpg==0.31.0; python_version >= "3.13"

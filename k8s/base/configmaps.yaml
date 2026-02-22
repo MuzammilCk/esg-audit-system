@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: esg-audit-config
+  namespace: esg-audit
+data:
+  LOG_LEVEL: "INFO"
+  PYTHONUNBUFFERED: "1"
+  USE_LLM_ANALYSIS: "true"
+  LLM_MODEL: "gpt-4-turbo-preview"
+  EMBEDDING_PROVIDER: "openai"
+  EMBEDDING_MODEL: "text-embedding-3-small"
+  USE_SQLITE_CHECKPOINT: "false"
+  AUTO_MITIGATE: "true"
+  ALERT_THRESHOLD: "0.6"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: esg-audit
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    port 6379
+    maxmemory 2gb
+    maxmemory-policy allkeys-lru
+    appendonly yes
+    appendfsync everysec
+    save 900 1
+    save 300 10
+    save 60 10000
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qdrant-config
+  namespace: esg-audit
+data:
+  production.yaml: |
+    log_level: INFO
+    storage:
+      storage_path: /qdrant/storage
+      snapshots_path: /qdrant/snapshots
+      on_disk_payload: true
+    service:
+      max_request_size_mb: 128
+      max_workers: 0
+    collection:
+      wal:
+        wal_capacity_mb: 32
+        wal_segments_ahead: 0
+    performance:
+      max_search_threads: 0
+      max_optimization_threads: 1
+    telemetry_disabled: false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-rules
+  namespace: esg-audit
+data:
+  csrd-rules.yaml: |
+    version: "1.0"
+    framework: CSRD
+    regulations:
+      - code: ESRS E1
+        name: Climate Change
+        requirements:
+          - GHG emissions disclosure (Scope 1, 2, 3)
+          - Climate transition plan
+          - Climate-related risks and opportunities
+          - Energy consumption and mix
+      - code: ESRS E2
+        name: Pollution
+        requirements:
+          - Pollution of air, water, and soil
+          - Substances of concern
+          - Pollution prevention and control
+      - code: ESRS S1
+        name: Own Workforce
+        requirements:
+          - Working conditions
+          - Equal treatment
+          - Health and safety
+      - code: ESRS G1
+        name: Governance
+        requirements:
+          - Corporate governance
+          - Business conduct
+          - Anti-corruption
+  sec-rules.yaml: |
+    version: "1.0"
+    framework: SEC
+    regulations:
+      - code: SEC-GHG
+        name: Greenhouse Gas Emissions
+        requirements:
+          - Scope 1 and Scope 2 emissions
+          - Emission calculation methodology
+          - Third-party assurance for material emissions
+      - code: SEC-CLIMATE-RISK
+        name: Climate-Related Risks
+        requirements:
+          - Physical risks identification
+          - Transition risks identification
+          - Risk mitigation strategies

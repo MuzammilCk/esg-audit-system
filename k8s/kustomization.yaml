@@ -1,0 +1,46 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: esg-audit
+
+resources:
+  - base/namespace.yaml
+  - base/rbac.yaml
+  - base/secrets.yaml
+  - base/configmaps.yaml
+  - services/redis.yaml
+  - services/qdrant.yaml
+  - services/audit-agents.yaml
+  - services/support-services.yaml
+  - services/ingress.yaml
+  - ray/ray-cluster.yaml
+  - ray/ray-jobs.yaml
+
+commonLabels:
+  app.kubernetes.io/name: esg-audit-system
+  app.kubernetes.io/version: "1.0.0"
+  app.kubernetes.io/managed-by: kustomize
+
+images:
+  - name: esg-audit/agents
+    newName: ${DOCKER_REGISTRY}/esg-audit/agents
+    newTag: ${IMAGE_TAG}
+  - name: esg-audit/vectorstore
+    newName: ${DOCKER_REGISTRY}/esg-audit/vectorstore
+    newTag: ${IMAGE_TAG}
+  - name: esg-audit/privacy
+    newName: ${DOCKER_REGISTRY}/esg-audit/privacy
+    newTag: ${IMAGE_TAG}
+  - name: esg-audit/security
+    newName: ${DOCKER_REGISTRY}/esg-audit/security
+    newTag: ${IMAGE_TAG}
+  - name: esg-audit/ray-jobs
+    newName: ${DOCKER_REGISTRY}/esg-audit/ray-jobs
+    newTag: ${IMAGE_TAG}
+
+configMapGenerator:
+  - name: esg-audit-config
+    behavior: merge
+    literals:
+      - DEPLOYMENT_ENV=kubernetes
+      - POD_NAMESPACE=esg-audit
