@@ -8,7 +8,6 @@ fastapi>=0.109.0
 uvicorn>=0.27.0
 
 # Async
-asyncio-compat>=0.1.0
 
 # Testing
 pytest>=7.4.0
