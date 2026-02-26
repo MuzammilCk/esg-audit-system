@@ -1,0 +1,51 @@
+# VCS
+.git
+.gitignore
+
+# Python cache/build artifacts
+**/__pycache__
+**/*.py[cod]
+**/*.so
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+**/htmlcov
+**/dist
+**/build
+
+# Virtual envs
+.venv
+venv
+**/.venv
+**/venv
+
+# IDE/editor artifacts
+.vscode
+.idea
+*.swp
+*.swo
+
+# Runtime/state artifacts
+*.log
+*.sqlite*
+checkpoints.db
+
+# Local data and large assets not needed for image build
+.env
+.env.*
+data/
+
+# Node artifacts (if present in future)
+**/node_modules
+
+# Documentation and CI metadata not needed at runtime
+.github/
+docs/
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+SECURITY.md
+
+# Test-only artifacts
+tests/

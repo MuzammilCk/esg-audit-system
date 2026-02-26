@@ -262,11 +262,14 @@ EOF
 ### 2. Start Services
 
 ```bash
-# Start all services with Docker Compose
-docker-compose up -d
+# Start core services first (lower disk/memory footprint)
+docker compose up -d redis qdrant document-fetcher privacy-service audit-agents vector-store
+
+# Optional: UI + security service
+docker compose up -d ui-service security-service
 
 # Verify services are running
-docker-compose ps
+docker compose ps
 ```
 
 ### 3. Run Your First Audit
@@ -323,7 +326,7 @@ Access interactive API docs at:
 ### Docker Compose (Development)
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Kubernetes (Production)
